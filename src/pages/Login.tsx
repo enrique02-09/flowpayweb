@@ -30,31 +30,55 @@ export default function Login({ onLogin }: Props) {
   }
 
   return (
-    <div className="login-container">
-      <h2>Admin Login</h2>
-      <form onSubmit={handleSubmit} className="login-form">
-        <label>
-          Email
+    <div className="w-full max-w-md bg-white rounded-2xl shadow-2xl p-8">
+      <div className="text-center mb-8">
+        <div className="text-5xl mb-4">💰</div>
+        <h2 className="text-3xl font-bold text-gray-800 mb-2">FlowPay Admin</h2>
+        <p className="text-gray-500">Sign in to your admin account</p>
+      </div>
+      <form onSubmit={handleSubmit} className="space-y-5">
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            Email Address
+          </label>
           <input
             type="email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             autoComplete="email"
+            className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+            placeholder="admin@flowpay.com"
           />
-        </label>
-        <label>
-          Password
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            Password
+          </label>
           <input
             type="password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             autoComplete="current-password"
+            className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+            placeholder="••••••••"
           />
-        </label>
-        {error && <div className="error">{error}</div>}
-        <button type="submit" disabled={loading}>{loading ? 'Signing in...' : 'Sign in'}</button>
+        </div>
+        {error && (
+          <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-xl text-sm">
+            {error}
+          </div>
+        )}
+        <button
+          type="submit"
+          disabled={loading}
+          className="w-full bg-gradient-to-r from-blue-500 to-cyan-500 text-white font-semibold py-3 rounded-xl hover:shadow-lg transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          {loading ? 'Signing in...' : 'Sign in'}
+        </button>
       </form>
-      <p>Tip: use your admin email and password</p>
+      <p className="text-center text-sm text-gray-500 mt-6">
+        🔒 Secure admin access only
+      </p>
     </div>
   )
 }

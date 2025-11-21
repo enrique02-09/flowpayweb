@@ -1,8 +1,6 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '../services/supabase';
 
-type Setting = { key: string; value: string }
-
 export default function SystemConfig() {
   const [settings, setSettings] = useState<Record<string, string>>({})
   const [loading, setLoading] = useState(false)

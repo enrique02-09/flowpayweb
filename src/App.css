@@ -1,20 +1,15 @@
-/* App level container (keeps markup compatible) */
-.app-root{display:flex;align-items:center;justify-content:center;min-height:100vh;padding:2rem}
-
-/* Card / glass surface used by login */
-.login-container{
-  width:100%;max-width:420px;padding:2rem;border-radius:var(--radius);
-  background: linear-gradient(180deg, rgba(255,255,255,0.03), rgba(255,255,255,0.02));
-  border:1px solid var(--card-border);
-  backdrop-filter: blur(var(--glass-blur));
-  box-shadow: 0 10px 30px rgba(2,6,23,0.6);
-  color:var(--muted);
+/* Keep minimal custom CSS for compatibility */
+.app-root {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
 }
 
-/* dashboard uses admin-shell and is full width */
-.dashboard{color:var(--muted)}
-
-.login-container h2,.dashboard h2{color:rgba(255,255,255,0.95);margin-bottom:1rem}
+.app-root.admin-mode {
+  align-items: flex-start;
+  background-color: #f1f5f9;
+}
 
 .login-form{display:flex;flex-direction:column;gap:0.75rem}
 

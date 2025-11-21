@@ -7,69 +7,408 @@ type Biller = {
   bill_type?: string
   amount?: number
   due_date?: string
+  created_at?: string
   status?: string
 }
 
 export default function Billers() {
   const [billers, setBillers] = useState<Biller[]>([])
   const [loading, setLoading] = useState(false)
-  const [newBiller, setNewBiller] = useState({ bill_type: '', amount: '', due_date: '' })
+  const [page, setPage] = useState(0)
+  const [total, setTotal] = useState(0)
+  const [search, setSearch] = useState('')
+  const [error, setError] = useState<string | null>(null)
+  const [newBiller, setNewBiller] = useState<any>({ bill_type: '', amount: '', due_date: '', user_id: '' })
+  const [showAddModal, setShowAddModal] = useState(false)
+  const [profileResults, setProfileResults] = useState<Array<any>>([])
+  const [profileLoading, setProfileLoading] = useState(false)
+
+  // profiles for dropdown selection in Add Biller modal
+
+  const PAGE_SIZE = 10
 
   useEffect(() => {
     fetchBillers()
-  }, [])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [page, search])
 
   async function fetchBillers() {
     setLoading(true)
-    const { data, error } = await supabase.from('bills').select('*').order('due_date', { ascending: true }).limit(200)
-    if (!error) setBillers(data || [])
-    setLoading(false)
+    setError(null)
+    try {
+      const from = page * PAGE_SIZE
+      const to = from + PAGE_SIZE - 1
+
+      let query: any = supabase
+        .from('bills')
+        .select('id,user_id,bill_type,amount,due_date,created_at,status', { count: 'exact' })
+        .order('due_date', { ascending: true })
+        .range(from, to)
+
+      if (search && search.trim()) {
+        const q = `%${search.trim()}%`
+        query = supabase
+          .from('bills')
+          .select('id,user_id,bill_type,amount,due_date,created_at,status', { count: 'exact' })
+          .or(`bill_type.ilike.${q},status.ilike.${q},user_id.eq.${search.trim()}`)
+          .order('due_date', { ascending: true })
+          .range(from, to)
+      }
+
+      const { data, error: err, count } = await query
+      if (err) throw err
+      setBillers((data || []) as Biller[])
+      setTotal(Number(count ?? 0))
+    } catch (e: any) {
+      setError(e?.message || 'Failed to load billers')
+    } finally {
+      setLoading(false)
+    }
   }
 
   async function addBiller(e: React.FormEvent) {
     e.preventDefault()
-    const payload = {
-      bill_type: newBiller.bill_type,
-      amount: Number(newBiller.amount || 0),
-      due_date: newBiller.due_date || null,
-      status: 'active',
-    }
-    const { error } = await supabase.from('bills').insert(payload)
-    if (!error) {
-      setNewBiller({ bill_type: '', amount: '', due_date: '' })
+    setError(null)
+    try {
+      // for now, log any extra fields (e.g. provider/reference for electricity)
+      if (newBiller.bill_type === 'Electricity') {
+        // eslint-disable-next-line no-console
+        console.log('Adding electricity biller with details:', {
+          provider: newBiller.provider,
+          reference: newBiller.reference,
+          recipient_name: newBiller.recipient_name,
+          recipient_email: newBiller.recipient_email,
+        })
+      }
+      const payload: any = {
+        bill_type: newBiller.bill_type,
+        amount: Number(newBiller.amount || 0),
+        due_date: newBiller.due_date || null,
+        created_at: new Date().toISOString(),
+        status: 'active',
+      }
+      if (newBiller.user_id) payload.user_id = newBiller.user_id
+      const { error } = await supabase.from('bills').insert(payload)
+      if (error) throw error
+      setNewBiller({ bill_type: '', amount: '', due_date: '', user_id: '', provider: '', reference: '', recipient_name: '', recipient_email: '' })
+      setPage(0)
       fetchBillers()
+    } catch (e: any) {
+      setError(e?.message || 'Failed to add biller')
     }
   }
 
+  
+
+  async function loadProfiles() {
+    setProfileLoading(true)
+    try {
+      const { data, error } = await supabase
+        .from('profile')
+        .select('id,account_number,fullname,email')
+        .order('account_number', { ascending: true })
+        .limit(100)
+      if (error) throw error
+      setProfileResults(data || [])
+    } catch (e) {
+      setProfileResults([])
+    } finally {
+      setProfileLoading(false)
+    }
+  }
+
+  useEffect(() => {
+    if (showAddModal) loadProfiles()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [showAddModal])
+
   return (
-    <div>
-      <h3>Bill Payment Management</h3>
-      <p>Manage billers and monitor payments.</p>
+    <div className="bg-white rounded-2xl shadow-lg p-6">
+      <div className="flex items-center justify-between mb-6">
+        <div>
+          <h3 className="text-2xl font-bold text-gray-800">Bill Payment Management</h3>
+          <p className="text-gray-500 mt-1">Add billers and monitor upcoming payments.</p>
+        </div>
+      </div>
 
-      <form onSubmit={addBiller} style={{ marginTop: 12 }}>
-        <input placeholder="Biller name/type" value={newBiller.bill_type} onChange={(e) => setNewBiller(s => ({ ...s, bill_type: e.target.value }))} />
-        <input placeholder="Amount" value={newBiller.amount} onChange={(e) => setNewBiller(s => ({ ...s, amount: e.target.value }))} />
-        <input
-          type="date"
-          value={newBiller.due_date}
-          onChange={(e) => setNewBiller(s => ({ ...s, due_date: e.target.value }))}
-          placeholder="Due date"
-          title="Due date"
-        />
-        <button type="submit">Add Biller</button>
-      </form>
+      <div className="flex items-center justify-between mb-6">
+        <div className="flex items-center gap-3">
+          <button
+            className="px-4 py-2 bg-green-600 text-white rounded-xl hover:bg-green-700"
+            onClick={() => setShowAddModal(true)}
+          >
+            + New Biller
+          </button>
+        </div>
+      </div>
 
-      <div style={{ marginTop: 16 }}>
-        <h4>Billers</h4>
-        {loading && <div>Loading…</div>}
-        {!loading && billers.length === 0 && <div>No billers</div>}
-        <ul>
-          {billers.map(b => (
-            <li key={b.id}>
-              {b.bill_type} — ${b.amount} — due {b.due_date} — {b.status}
-            </li>
-          ))}
-        </ul>
+      <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center gap-3">
+          <input
+            className="px-4 py-2 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500"
+            placeholder="Search billers..."
+            value={search}
+            onChange={(e) => { setPage(0); setSearch(e.target.value) }}
+          />
+        </div>
+        <div className="text-sm text-gray-600">Total: <strong>{total.toLocaleString()}</strong></div>
+      </div>
+
+      {/* Add biller modal */}
+      {showAddModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center">
+          <div className="absolute inset-0 bg-black/40" onClick={() => setShowAddModal(false)} />
+          <div className="relative bg-white rounded-2xl shadow-lg p-6 w-full max-w-md z-10">
+            <div className="flex items-start justify-between">
+              <h4 className="text-lg font-semibold">Add Biller</h4>
+              <button className="text-gray-500 hover:text-gray-700" onClick={() => setShowAddModal(false)}>✕</button>
+            </div>
+            <form onSubmit={(e) => { addBiller(e); setShowAddModal(false) }} className="mt-4 space-y-3">
+              <label className="block text-sm text-gray-700">Category
+                <select
+                  required
+                  className="mt-1 w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  value={newBiller.bill_type}
+                  onChange={(e) => setNewBiller((s: any) => ({ ...s, bill_type: e.target.value }))}
+                >
+                  <option value="">Select a category</option>
+                  <option value="Electricity">Electricity</option>
+                  <option value="Water">Water</option>
+                  <option value="Internet">Internet</option>
+                  <option value="Phone">Phone</option>
+                  <option value="Cable TV">Cable TV</option>
+                  <option value="Others">Others</option>
+                </select>
+              </label>
+
+              <label className="block text-sm text-gray-700">Amount
+                <input
+                  required
+                  className="mt-1 w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  placeholder="Amount"
+                  value={newBiller.amount}
+                  onChange={(e) => setNewBiller((s: any) => ({ ...s, amount: e.target.value }))}
+                />
+              </label>
+
+              <label className="block text-sm text-gray-700">Due date
+                <input
+                  type="date"
+                  className="mt-1 w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  value={newBiller.due_date}
+                  onChange={(e) => setNewBiller((s: any) => ({ ...s, due_date: e.target.value }))}
+                />
+              </label>
+
+              {/* Electricity-specific fields */}
+              {newBiller.bill_type === 'Electricity' && (
+                <div className="space-y-3">
+                  <label className="block text-sm text-gray-700">Provider
+                    <select
+                      className="mt-1 w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      value={newBiller.provider || ''}
+                      onChange={(e) => setNewBiller((s: any) => ({ ...s, provider: e.target.value }))}
+                    >
+                      <option value="">Select provider</option>
+                      <option value="BATELEC II - Balayan">BATELEC II - Balayan</option>
+                      <option value="BATELEC II - Nasugbu">BATELEC II - Nasugbu</option>
+                    </select>
+                  </label>
+
+                  <label className="block text-sm text-gray-700">Biller Reference Number
+                    <input
+                      className="mt-1 w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 font-mono"
+                      placeholder="Enter biller reference number"
+                      value={newBiller.reference || ''}
+                      onChange={(e) => setNewBiller((s: any) => ({ ...s, reference: e.target.value }))}
+                    />
+                  </label>
+
+                  <label className="block text-sm text-gray-700">Recipient Name
+                    <input
+                      className="mt-1 w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      placeholder="Enter recipient full name"
+                      value={newBiller.recipient_name || ''}
+                      onChange={(e) => setNewBiller((s: any) => ({ ...s, recipient_name: e.target.value }))}
+                    />
+                  </label>
+
+                  <label className="block text-sm text-gray-700">Recipient Email
+                    <input
+                      type="email"
+                      className="mt-1 w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      placeholder="Enter recipient email"
+                      value={newBiller.recipient_email || ''}
+                      onChange={(e) => setNewBiller((s: any) => ({ ...s, recipient_email: e.target.value }))}
+                    />
+                  </label>
+                </div>
+              )}
+
+              {/* Water-specific fields (same inputs as Electricity) */}
+              {newBiller.bill_type === 'Water' && (
+                <div className="space-y-3">
+                  <label className="block text-sm text-gray-700">Provider
+                    <select
+                      className="mt-1 w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      value={newBiller.provider || ''}
+                      onChange={(e) => setNewBiller((s: any) => ({ ...s, provider: e.target.value }))}
+                    >
+                      <option value="">Select provider</option>
+                      <option value="Balayan Water District">Balayan Water District</option>
+                      <option value="Prime Water Nasugbu">Prime Water Nasugbu</option>
+                      <option value="Lian Water District">Lian Water District</option>
+                    </select>
+                  </label>
+
+                  <label className="block text-sm text-gray-700">Biller Reference Number
+                    <input
+                      className="mt-1 w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 font-mono"
+                      placeholder="Enter biller reference number"
+                      value={newBiller.reference || ''}
+                      onChange={(e) => setNewBiller((s: any) => ({ ...s, reference: e.target.value }))}
+                    />
+                  </label>
+
+                  <label className="block text-sm text-gray-700">Recipient Name
+                    <input
+                      className="mt-1 w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      placeholder="Enter recipient full name"
+                      value={newBiller.recipient_name || ''}
+                      onChange={(e) => setNewBiller((s: any) => ({ ...s, recipient_name: e.target.value }))}
+                    />
+                  </label>
+
+                  <label className="block text-sm text-gray-700">Recipient Email
+                    <input
+                      type="email"
+                      className="mt-1 w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      placeholder="Enter recipient email"
+                      value={newBiller.recipient_email || ''}
+                      onChange={(e) => setNewBiller((s: any) => ({ ...s, recipient_email: e.target.value }))}
+                    />
+                  </label>
+                </div>
+              )}
+
+              <div>
+                <label className="block text-sm text-gray-700">Select Account Number</label>
+                <div className="relative">
+                  <select
+                    aria-label="Select account number"
+                    required
+                    className="mt-1 w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 font-mono"
+                    value={newBiller.user_id || ''}
+                    onChange={(e) => {
+                      const id = e.target.value
+                      const p = profileResults.find((pr) => pr.id === id)
+                      setNewBiller((s: any) => ({
+                        ...s,
+                        user_id: id || '',
+                        account_number: p?.account_number || '',
+                        recipient_name: p?.fullname || s.recipient_name,
+                        recipient_email: p?.email || s.recipient_email,
+                      }))
+                    }}
+                  >
+                    <option value="">Select an account</option>
+                    {profileLoading && <option disabled>Loading profiles…</option>}
+                    {!profileLoading && profileResults.map((p) => (
+                      <option key={p.id} value={p.id}>{`${p.account_number} — ${p.fullname || p.email || p.id}`}</option>
+                    ))}
+                  </select>
+                  {profileLoading && <div className="absolute right-3 top-3 text-xs text-gray-500">…</div>}
+                </div>
+              </div>
+
+              {/* show autofilled name/email when account selected */}
+              {newBiller.account_number && (
+                <div className="space-y-2">
+                  <div className="text-sm text-gray-700">Name</div>
+                  <div className="text-sm font-medium text-gray-800">{newBiller.recipient_name || '—'}</div>
+                  <div className="text-sm text-gray-700">Email</div>
+                  <div className="text-sm font-medium text-gray-800">{newBiller.recipient_email || '—'}</div>
+                </div>
+              )}
+
+              <div className="mt-4 flex items-center justify-end gap-3">
+                <button type="button" className="px-4 py-2 bg-gray-100 rounded-lg hover:bg-gray-200" onClick={() => setShowAddModal(false)}>Cancel</button>
+                <button type="submit" className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">Add Biller</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {error && <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-xl text-sm mb-4">{error}</div>}
+
+      <div className="overflow-x-auto">
+        <table className="w-full">
+          <thead>
+            <tr className="border-b-2 border-gray-200">
+              <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">Biller</th>
+              <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">Amount</th>
+                <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">Due</th>
+                <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">Created</th>
+              <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">Status</th>
+              <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">Owner</th>
+            </tr>
+          </thead>
+          <tbody>
+            {loading && (
+              <tr>
+                <td colSpan={5} className="py-8 text-center text-gray-500">Loading…</td>
+              </tr>
+            )}
+            {!loading && billers.length === 0 && (
+              <tr>
+                <td colSpan={5} className="py-8 text-center text-gray-500">No billers found</td>
+              </tr>
+            )}
+            {!loading && billers.map((b) => (
+              <tr key={b.id} className="border-b border-gray-100 hover:bg-gray-50">
+                <td className="py-3 px-4 text-sm text-gray-800 font-medium">{b.bill_type || '—'}</td>
+                <td className="py-3 px-4 text-sm text-gray-700">${Number(b.amount ?? 0).toLocaleString()}</td>
+                <td className="py-3 px-4 text-sm text-gray-700">{b.due_date ? new Date(b.due_date).toLocaleDateString() : '—'}</td>
+                <td className="py-3 px-4 text-sm text-gray-700">{b.created_at ? new Date(b.created_at).toLocaleString() : '—'}</td>
+                <td className="py-3 px-4 text-sm">
+                  <span className={`px-3 py-1 rounded-full text-xs font-medium ${b.status === 'active' ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-700'}`}>
+                    {b.status || '—'}
+                  </span>
+                </td>
+                <td className="py-3 px-4 text-sm text-gray-700 font-mono">{b.user_id || '—'}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      <div className="flex items-center justify-between mt-6 pt-4 border-t border-gray-200">
+        <button
+          className="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium rounded-xl transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          onClick={() => setPage((p) => Math.max(0, p - 1))}
+          disabled={page === 0}
+        >
+          ← Previous
+        </button>
+        <span className="text-sm text-gray-600">
+          {total > 0 ? (
+            (() => {
+              const start = page * PAGE_SIZE
+              const end = Math.min(start + billers.length, total)
+              return <span>{`${start + 1}–${end} of ${total.toLocaleString()}`}</span>
+            })()
+          ) : (
+            <span>0 of 0</span>
+          )}
+        </span>
+        <button
+          className="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium rounded-xl transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          onClick={() => setPage((p) => p + 1)}
+          disabled={(page + 1) * PAGE_SIZE >= total}
+        >
+          Next →
+        </button>
       </div>
     </div>
   )
