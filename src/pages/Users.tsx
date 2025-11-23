@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '../services/supabase'
+import Icon from '../components/Icons'
 
 type Profile = {
   id: string
@@ -157,32 +158,48 @@ export default function Users() {
           <h3 className="text-2xl font-bold text-gray-800">User Management</h3>
           <p className="text-gray-500 mt-1">Total users: <strong>{total.toLocaleString()}</strong></p>
         </div>
-        <button
-          className="px-4 py-2 bg-gradient-to-r from-green-500 to-emerald-500 text-white font-medium rounded-xl hover:shadow-lg transition-shadow duration-200 disabled:opacity-50"
-          onClick={exportCSV}
-          disabled={loading || total === 0}
-        >
-          📥 Export CSV
-        </button>
+        <div className="flex items-center gap-3">
+          <button
+            className="inline-flex items-center gap-2 px-4 py-2 bg-white border border-gray-200 text-gray-700 rounded-xl hover:shadow transition-shadow"
+            onClick={exportCSV}
+            disabled={loading || total === 0}
+          >
+            <Icon name="download" className="w-4 h-4 text-current" />
+            <span className="text-sm font-medium">Export</span>
+          </button>
+          <button
+            className="px-4 py-2 bg-gradient-to-r from-green-500 to-emerald-500 text-white font-medium rounded-xl hover:shadow-lg transition-shadow duration-200 disabled:opacity-50"
+            onClick={() => fetchUsers()}
+            disabled={loading}
+          >
+            Refresh
+          </button>
+        </div>
       </div>
 
       <div className="flex gap-3 mb-6">
-        <input
-          className="flex-1 px-4 py-2.5 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-          placeholder="Search by name, email or account number..."
-          value={search}
-          onChange={(e) => {
-            setPage(0)
-            setSearch(e.target.value)
-          }}
-        />
-        <button
-          className="px-6 py-2.5 bg-blue-500 text-white font-medium rounded-xl hover:bg-blue-600 transition-colors disabled:opacity-50"
-          onClick={() => fetchUsers()}
-          disabled={loading}
-        >
-          🔍 Search
-        </button>
+        <div className="flex items-center gap-2 bg-gray-50 border border-gray-100 rounded-xl px-3 py-2 flex-1">
+          <Icon name="search" className="w-5 h-5 text-gray-400" />
+          <input
+            className="flex-1 bg-transparent outline-none text-sm text-gray-700"
+            placeholder="Search by name, email or account number..."
+            value={search}
+            onChange={(e) => {
+              setPage(0)
+              setSearch(e.target.value)
+            }}
+          />
+          <button className="text-sm text-gray-500" onClick={() => { setPage(0); setSearch(''); }}>Clear</button>
+        </div>
+        <div className="hidden md:flex items-center gap-2">
+          <button
+            className="px-4 py-2 bg-blue-500 text-white font-medium rounded-xl hover:bg-blue-600 transition-colors disabled:opacity-50"
+            onClick={() => fetchUsers()}
+            disabled={loading}
+          >
+            Search
+          </button>
+        </div>
       </div>
 
       {error && (
@@ -193,61 +210,60 @@ export default function Users() {
 
       {loading ? (
         <div className="text-center py-12 text-gray-500">
-          <div className="text-4xl mb-2">⏳</div>
-          Loading…
+          <div className="text-4xl mb-2">Loading…</div>
         </div>
       ) : (
         <>
           <div className="overflow-x-auto">
-            <table className="w-full">
+            <table className="w-full table-auto">
               <thead>
-                <tr className="border-b-2 border-gray-200">
-                  <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">Name</th>
-                  <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">Account</th>
-                  <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">Email</th>
-                  <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">Balance</th>
-                  <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">Role</th>
-                  <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">Status</th>
-                  <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">Actions</th>
+                <tr className="text-left text-sm text-gray-500 border-b-2 border-gray-100">
+                  <th className="py-3 px-4">User</th>
+                  <th className="py-3 px-4">Account</th>
+                  <th className="py-3 px-4">Email</th>
+                  <th className="py-3 px-4">Balance</th>
+                  <th className="py-3 px-4">Role</th>
+                  <th className="py-3 px-4">Status</th>
+                  <th className="py-3 px-4">Actions</th>
                 </tr>
               </thead>
               <tbody>
                 {users.map((u) => (
                   <tr key={u.id} className="border-b border-gray-100 hover:bg-gray-50 transition-colors">
-                    <td className="py-3 px-4 text-sm text-gray-800 font-medium">{u.fullname || '—'}</td>
-                    <td className="py-3 px-4 text-sm text-gray-700 font-mono">{u.account_number || '—'}</td>
-                    <td className="py-3 px-4 text-sm text-gray-700">{u.email || '—'}</td>
-                    <td className="py-3 px-4 text-sm font-semibold text-gray-800">
-                      ${Number(u.balance ?? 0).toLocaleString()}
+                    <td className="py-3 px-4">
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center text-sm font-semibold text-gray-700">
+                          {(u.fullname || 'U').split(' ').map((s) => s[0]).slice(0,2).join('').toUpperCase()}
+                        </div>
+                        <div>
+                          <div className="text-sm font-medium text-gray-800">{u.fullname || '—'}</div>
+                          <div className="text-xs text-gray-500">{u.email || '—'}</div>
+                        </div>
+                      </div>
                     </td>
-                    <td className="py-3 px-4 text-sm">
-                      <span
-                        className={`px-3 py-1 rounded-full text-xs font-medium ${
-                          u.is_admin ? 'bg-purple-100 text-purple-700' : 'bg-gray-100 text-gray-600'
-                        }`}
-                      >
+                    <td className="py-3 px-4 font-mono text-sm text-gray-700">{u.account_number || '—'}</td>
+                    <td className="py-3 px-4 text-sm text-gray-700">{u.email || '—'}</td>
+                    <td className="py-3 px-4 text-sm font-semibold text-gray-800">${Number(u.balance ?? 0).toLocaleString()}</td>
+                    <td className="py-3 px-4">
+                      <span className={`px-3 py-1 rounded-full text-xs font-medium ${u.is_admin ? 'bg-purple-100 text-purple-700' : 'bg-gray-100 text-gray-600'}`}>
                         {u.is_admin ? 'Admin' : 'User'}
                       </span>
                     </td>
-                    <td className="py-3 px-4 text-sm">
-                      <span
-                        className={`px-3 py-1 rounded-full text-xs font-medium ${
-                          u.is_active !== false ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
-                        }`}
-                      >
+                    <td className="py-3 px-4">
+                      <span className={`px-3 py-1 rounded-full text-xs font-medium ${u.is_active !== false ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
                         {u.is_active !== false ? 'Active' : 'Suspended'}
                       </span>
                     </td>
-                    <td className="py-3 px-4 text-sm">
+                    <td className="py-3 px-4">
                       <div className="flex gap-2">
                         <button
-                          className="px-3 py-1.5 bg-gray-100 hover:bg-gray-200 text-gray-700 text-xs font-medium rounded-lg transition-colors"
+                          className="inline-flex items-center gap-2 px-3 py-1.5 bg-white border border-gray-200 hover:shadow-sm text-gray-700 text-sm font-medium rounded-lg transition-all"
                           onClick={() => toggleActive(u)}
                         >
-                          {u.is_active !== false ? 'Suspend' : 'Activate'}
+                          <span>{u.is_active !== false ? 'Suspend' : 'Activate'}</span>
                         </button>
                         <button
-                          className="px-3 py-1.5 bg-white border border-gray-200 hover:bg-gray-50 text-gray-700 text-xs font-medium rounded-lg transition-colors"
+                          className="inline-flex items-center gap-2 px-3 py-1.5 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors"
                           onClick={() => {
                             setEditUser(u)
                             setEditName(u.fullname || '')
@@ -302,7 +318,7 @@ export default function Users() {
           <div className="relative bg-white rounded-2xl shadow-lg p-6 w-full max-w-lg z-10">
             <div className="flex items-start justify-between">
               <h4 className="text-lg font-semibold">Edit User</h4>
-              <button className="text-gray-500 hover:text-gray-700" onClick={closeEdit}>✕</button>
+              <button className="text-gray-500 hover:text-gray-700" onClick={closeEdit}><Icon name="close" className="w-4 h-4" /></button>
             </div>
             {editError && <div className="bg-red-50 border border-red-200 text-red-700 px-3 py-2 rounded mt-3">{editError}</div>}
             <div className="mt-4 space-y-3">

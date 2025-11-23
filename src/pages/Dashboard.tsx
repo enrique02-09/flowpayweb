@@ -1,7 +1,10 @@
 import { useEffect, useState } from 'react'
 import PlaceholderChart from '../components/PlaceholderChart'
+import DonutChart from '../components/DonutChart'
 import Sidebar from '../components/Sidebar'
 import StatsCard from '../components/StatsCard'
+import BottomNav from '../components/BottomNav'
+import Icon from '../components/Icons'
 import { logout } from '../services/auth'
 import { supabase } from '../services/supabase'
 import Admins from './Admins'
@@ -34,6 +37,7 @@ export default function Dashboard({ onLogout }: Props) {
   const [totalTx, setTotalTx] = useState<number | null>(null)
   const [totalTransferred, setTotalTransferred] = useState<number | null>(null)
   const [_monthlyVolume, setMonthlyVolume] = useState<Array<{ month: string; count: number; total: number }>>([])
+  const [overviewRange, setOverviewRange] = useState<number>(6) // months (default 6)
   const [topUsers, setTopUsers] = useState<Array<{ user_id: string; name?: string; total: number }>>([])
   const [recentTx, setRecentTx] = useState<Tx[]>([])
   const [profilesMap, setProfilesMap] = useState<Record<string, string>>({})
@@ -130,6 +134,100 @@ export default function Dashboard({ onLogout }: Props) {
       }
     } catch (e) {
       // ignore for now
+    } finally {
+      setTxLoading(false)
+    }
+  }
+
+  // Export CSV for transactions (exports all matching records, not just current page)
+  async function exportTransactionsCSV() {
+    try {
+      setTxLoading(true)
+      const q = txSearch?.trim() || ''
+
+      // if there's a search, try to find matching profiles first
+      let profileIds: string[] = []
+      if (q) {
+        const pat = `%${q}%`
+        const { data: profiles } = await supabase
+          .from('profile')
+          .select('id')
+          .or(`account_number.ilike.${pat},fullname.ilike.${pat},email.ilike.${pat},username.ilike.${pat}`)
+          .limit(200)
+        profileIds = (profiles || []).map((p: any) => p.id)
+      }
+
+      // build query similar to fetchPagedTransactions but without range
+      let query: any = supabase
+        .from('transactions')
+        .select('id,created_at,amount,type,status,user_id,description')
+        .order('created_at', { ascending: false })
+
+      if (q) {
+        const pat = `%${q}%`
+        const orParts = [`description.ilike.${pat}`, `type.ilike.${pat}`]
+        profileIds.forEach((id) => orParts.push(`user_id.eq.${id}`))
+        const orClause = orParts.join(',')
+        query = query.or(orClause)
+      }
+
+      const { data: allTx, error } = await query
+      if (error) throw error
+
+      const rows = (allTx || []) as Tx[]
+
+      if (!rows.length) {
+        // nothing to export
+        alert('No transactions to export')
+        return
+      }
+
+      // build CSV
+      const header = ['Date', 'User', 'Type', 'Amount', 'Status', 'Description', 'ID']
+      const csvRows = [header.join(',')]
+
+      // map profiles for user labels (use existing profilesMap when possible)
+      const ids = Array.from(new Set(rows.map((r) => r.user_id).filter(Boolean)))
+      let lookup: Record<string, string> = { ...(profilesMap || {}) }
+      if (ids.length) {
+        try {
+          const { data: profiles } = await supabase
+            .from('profile')
+            .select('id,account_number,fullname,email,username')
+            .in('id', ids)
+          ;(profiles || []).forEach((p: any) => {
+            lookup[p.id] = p.account_number || p.fullname || p.email || p.username || p.id
+          })
+        } catch (e) {
+          // ignore
+        }
+      }
+
+      rows.forEach((r) => {
+        const date = r.created_at ? new Date(r.created_at).toLocaleString() : ''
+        const userLabel = (r.user_id && lookup[r.user_id]) || r.user_id || ''
+        const type = r.type || ''
+        const amount = typeof r.amount === 'number' ? r.amount.toString() : (r.amount || '')
+        const status = r.status || ''
+        const desc = (r.description || '').replace(/\n/g, ' ').replace(/"/g, '""')
+        const id = r.id || ''
+        const row = [date, `"${userLabel}"`, type, amount, status, `"${desc}"`, id]
+        csvRows.push(row.join(','))
+      })
+
+      const csv = csvRows.join('\n')
+      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' })
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `transactions-${new Date().toISOString().slice(0,19).replace(/[:T]/g,'-')}.csv`
+      document.body.appendChild(a)
+      a.click()
+      a.remove()
+      URL.revokeObjectURL(url)
+    } catch (err: any) {
+      console.error(err)
+      alert(err?.message || 'Export failed')
     } finally {
       setTxLoading(false)
     }
@@ -278,25 +376,33 @@ export default function Dashboard({ onLogout }: Props) {
     }
   }
 
+  // quick actions removed (transfer / pay bills buttons were removed)
+
   return (
     <div className="flex gap-6 w-screen min-h-screen bg-gray-50">
       <Sidebar active={section} onNavigate={setSection} />
 
-      <main className="flex-1 max-w-full">
-        {/* Header */}
-        <div className="bg-white rounded-2xl shadow-lg p-6 mb-6">
-          <div className="flex items-center justify-between">
+      <main className="flex-1 max-w-full relative">
+        {/* Mobile-style header/banner (mirrors mobile app look) */}
+        <div className="mobile-banner rounded-2xl shadow-lg p-6 mb-6 overflow-hidden">
+          <div className="flex items-start justify-between">
             <div>
-              <h2 className="text-3xl font-bold text-gray-800">Admin Console</h2>
-              <p className="text-gray-500 mt-1">Manage your FlowPay platform</p>
+                <h2 className="text-sm font-semibold opacity-90">Balance</h2>
+                <div className="mt-2 balance-value text-4xl md:text-5xl font-extrabold">{loading ? '...' : `₱${(totalTransferred ?? 0).toLocaleString()}`}</div>
+              </div>
+
+            <div className="flex items-start gap-3">
+              <div className="profile-badge">ES</div>
+              <button
+                onClick={handleLogout}
+                className="logout-ghost hidden md:inline-block px-4 py-2 bg-white/20 text-white font-medium rounded-xl transition-colors"
+              >
+                Logout
+              </button>
             </div>
-            <button
-              onClick={handleLogout}
-              className="px-6 py-2.5 bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium rounded-xl transition-colors duration-200"
-            >
-              Logout
-            </button>
           </div>
+
+          {/* action buttons removed per request */}
         </div>
 
         {section === 'overview' && (
@@ -306,19 +412,19 @@ export default function Dashboard({ onLogout }: Props) {
               <StatsCard
                 title="Total Users"
                 value={loading ? '...' : (totalUsers ?? 0).toLocaleString()}
-                icon="👥"
+                icon="user"
                 color="blue"
               />
               <StatsCard
                 title="Total Transactions"
                 value={loading ? '...' : (totalTx ?? 0).toLocaleString()}
-                icon="💳"
+                icon="chartLine"
                 color="green"
               />
               <StatsCard
                 title="Total Transferred"
                 value={loading ? '...' : `$${(totalTransferred ?? 0).toLocaleString()}`}
-                icon="💰"
+                icon="creditCard"
                 color="purple"
               />
             </div>
@@ -326,27 +432,89 @@ export default function Dashboard({ onLogout }: Props) {
             {/* Charts Grid */}
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
               <div className="lg:col-span-2">
-                <PlaceholderChart title="Monthly Transaction Volume" />
+                <div className="flex items-center justify-between mb-3">
+                  <h3 className="text-lg font-semibold text-gray-800">Monthly Transaction Volume</h3>
+                  <div className="flex items-center gap-2">
+                    <button
+                      className={`px-3 py-1 rounded-lg text-sm ${overviewRange === 1 ? 'bg-blue-500 text-white' : 'bg-gray-100 text-gray-700'}`}
+                      onClick={() => setOverviewRange(1)}
+                    >1M</button>
+                    <button
+                      className={`px-3 py-1 rounded-lg text-sm ${overviewRange === 3 ? 'bg-blue-500 text-white' : 'bg-gray-100 text-gray-700'}`}
+                      onClick={() => setOverviewRange(3)}
+                    >3M</button>
+                    <button
+                      className={`px-3 py-1 rounded-lg text-sm ${overviewRange === 6 ? 'bg-blue-500 text-white' : 'bg-gray-100 text-gray-700'}`}
+                      onClick={() => setOverviewRange(6)}
+                    >6M</button>
+                    <button
+                      className={`px-3 py-1 rounded-lg text-sm ${overviewRange === 12 ? 'bg-blue-500 text-white' : 'bg-gray-100 text-gray-700'}`}
+                      onClick={() => setOverviewRange(12)}
+                    >12M</button>
+                    <button
+                      className={`px-3 py-1 rounded-lg text-sm ${overviewRange === 0 ? 'bg-blue-500 text-white' : 'bg-gray-100 text-gray-700'}`}
+                      onClick={() => setOverviewRange(0)}
+                      title="All"
+                    >All</button>
+                  </div>
+                </div>
+
+                {/* build chart data from monthlyVolume */}
+                {
+                  (() => {
+                    const months = _monthlyVolume.slice().sort((a, b) => a.month.localeCompare(b.month))
+                    let filtered = months
+                    if (overviewRange > 0) {
+                      filtered = months.slice(-overviewRange)
+                    }
+                    const chartData = filtered.map((m) => {
+                      const parts = m.month.split('-')
+                      const y = parts[0]
+                      const mo = Number(parts[1])
+                      const label = new Date(Number(y), mo - 1, 1).toLocaleString(undefined, { month: 'short' })
+                      return { label, value: Math.round(m.total || m.count || 0) }
+                    })
+
+                    return <PlaceholderChart title="" data={chartData} type="bar" height={220} />
+                  })()
+                }
               </div>
-              <div className="bg-white rounded-2xl shadow-lg p-6">
-                <h3 className="text-lg font-semibold text-gray-800 mb-4">Top Users</h3>
-                <div className="space-y-3">
-                  {topUsers.length === 0 && (
-                    <p className="text-gray-500 text-center py-8">No data available</p>
-                  )}
-                  {topUsers.slice(0, 5).map((u, idx) => (
-                    <div key={u.user_id} className="flex items-center justify-between p-3 bg-gray-50 rounded-xl">
-                      <div className="flex items-center gap-3">
-                        <span className="flex items-center justify-center w-8 h-8 bg-gradient-to-br from-blue-500 to-cyan-500 text-white rounded-lg font-bold text-sm">
-                          {idx + 1}
-                        </span>
-                        <span className="text-gray-700 font-medium truncate max-w-[150px]">
-                          {u.name || u.user_id}
-                        </span>
+
+              <div className="space-y-4">
+                <DonutChart
+                  title="Transaction Type Distribution"
+                  data={(() => {
+                    if (!recentTx || recentTx.length === 0) return []
+                    const map: Record<string, number> = {}
+                    recentTx.forEach((t) => {
+                      const key = (t.type || 'unknown').toString()
+                      map[key] = (map[key] || 0) + 1
+                    })
+                    const arr = Object.entries(map).map(([label, value]) => ({ label, value, color: undefined }))
+                    return arr.sort((a, b) => b.value - a.value).slice(0, 6)
+                  })()}
+                />
+
+                <div className="bg-white rounded-2xl shadow-lg p-6">
+                  <h3 className="text-lg font-semibold text-gray-800 mb-4">Top Users</h3>
+                  <div className="space-y-3">
+                    {topUsers.length === 0 && (
+                      <p className="text-gray-500 text-center py-8">No data available</p>
+                    )}
+                    {topUsers.slice(0, 5).map((u) => (
+                      <div key={u.user_id} className="flex items-center justify-between p-3 bg-gray-50 rounded-xl">
+                        <div className="flex items-center gap-3">
+                          <span className="flex items-center justify-center w-8 h-8 bg-gradient-to-br from-blue-500 to-cyan-500 text-white rounded-lg">
+                            <Icon name="user" className="w-4 h-4" />
+                          </span>
+                          <span className="text-gray-700 font-medium truncate max-w-[150px]">
+                            {u.name || u.user_id}
+                          </span>
+                        </div>
+                        <span className="text-gray-800 font-semibold">${u.total.toLocaleString()}</span>
                       </div>
-                      <span className="text-gray-800 font-semibold">${u.total.toLocaleString()}</span>
-                    </div>
-                  ))}
+                    ))}
+                  </div>
                 </div>
               </div>
             </div>
@@ -420,8 +588,12 @@ export default function Dashboard({ onLogout }: Props) {
                       setTxSearch(e.target.value)
                     }}
                   />
-                  <button className="px-4 py-2 bg-gradient-to-r from-blue-500 to-cyan-500 text-white font-medium rounded-xl hover:shadow-lg transition-shadow duration-200">
-                    Export CSV
+                  <button
+                    onClick={exportTransactionsCSV}
+                    disabled={txLoading}
+                    className="px-4 py-2 bg-gradient-to-r from-blue-500 to-cyan-500 text-white font-medium rounded-xl hover:shadow-lg transition-shadow duration-200 disabled:opacity-60 disabled:cursor-not-allowed"
+                  >
+                    {txLoading ? 'Exporting…' : 'Export CSV'}
                   </button>
                 </div>
               </div>
@@ -556,6 +728,9 @@ export default function Dashboard({ onLogout }: Props) {
           </div>
         )}
       </main>
+
+      {/* Mobile bottom navigation */}
+      <BottomNav />
     </div>
   )
 }

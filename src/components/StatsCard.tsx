@@ -1,3 +1,5 @@
+import Icon from './Icons'
+
 type Props = {
   title: string
   value: string
@@ -6,7 +8,7 @@ type Props = {
   color?: string
 }
 
-export default function StatsCard({ title, value, hint, icon = '📊', color = 'blue' }: Props) {
+export default function StatsCard({ title, value, hint, icon = 'chartBar', color = 'blue' }: Props) {
   const colorClasses = {
     blue: 'from-blue-500 to-cyan-500',
     green: 'from-green-500 to-emerald-500',
@@ -18,8 +20,8 @@ export default function StatsCard({ title, value, hint, icon = '📊', color = '
     <div className="bg-white rounded-2xl shadow-lg p-6 hover:shadow-xl transition-shadow duration-300">
       <div className="flex items-center justify-between mb-4">
         <p className="text-sm font-medium text-gray-600">{title}</p>
-        <span className={`text-3xl p-3 rounded-xl bg-gradient-to-br ${colorClasses} text-white shadow-lg`}>
-          {icon}
+        <span className={`p-3 rounded-xl bg-gradient-to-br ${colorClasses} text-white shadow-lg inline-flex items-center justify-center`}>
+          <Icon name={icon} className="w-5 h-5" />
         </span>
       </div>
       <p className="text-3xl font-bold text-gray-800 mb-1">{value}</p>

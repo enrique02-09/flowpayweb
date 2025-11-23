@@ -6,6 +6,41 @@
   min-height: 100vh;
 }
 
+/* Mobile-like banner and actions to mirror the app UI */
+.mobile-banner{
+  background: linear-gradient(180deg,#06b6d4 0%, #f59e0b 40%, #06b6d4 100%);
+  color: white;
+  padding: 2rem;
+  border-radius: 14px;
+  box-shadow: 0 18px 40px rgba(2,6,23,0.08);
+}
+.mobile-banner .profile-badge{width:44px;height:44px;border-radius:9999px;background:rgba(255,255,255,0.15);display:flex;align-items:center;justify-content:center;font-weight:700}
+.action-btn{background:white;color:#0f172a;padding:0.8rem;border-radius:14px;font-weight:700;box-shadow:0 10px 20px rgba(2,6,23,0.12)}
+.logout-ghost{border:1px solid rgba(255,255,255,0.12)}
+.action-btn{background:white;color:#0f172a;padding:1rem 1.25rem;border-radius:16px;font-weight:700;box-shadow:0 10px 30px rgba(2,6,23,0.12);min-width:160px}
+.logout-ghost{border:1px solid rgba(255,255,255,0.12);background:rgba(255,255,255,0.06);color:white;padding:0.5rem 0.9rem;border-radius:10px}
+/* hover/active for banner action buttons */
+.action-btn{transition:transform 180ms cubic-bezier(.2,.9,.2,1),box-shadow 180ms,background 120ms}
+.action-btn:hover{transform:translateY(-4px) scale(1.02);box-shadow:0 18px 36px rgba(2,6,23,0.14)}
+.action-btn:hover{transform:translateY(-4px) scale(1.02);box-shadow:0 18px 36px rgba(2,6,23,0.14)}
+.logout-ghost:hover{background:#ef4444;border-color:#ef4444;color:white;box-shadow:0 8px 18px rgba(239,68,68,0.14)}
+.logout-ghost:active{transform:translateY(1px)}
+
+/* Balance value styling */
+.mobile-banner .balance-value{font-size:2.75rem;line-height:1;color:white;text-shadow:0 2px 8px rgba(2,6,23,0.15)}
+.mobile-banner h2{opacity:0.95}
+
+/* make action buttons fill their grid cell and center content */
+.mobile-banner .action-btn{width:100%;display:flex;align-items:center;justify-content:center;gap:0.75rem}
+.mobile-banner .action-btn svg{opacity:0.95}
+.action-btn:active{transform:translateY(-1px) scale(0.995)}
+.action-btn:focus{outline:2px solid rgba(6,182,212,0.18);outline-offset:3px}
+
+/* bottom navigation (mobile) */
+.bottom-nav { pointer-events: auto; }
+.bottom-nav .fab { transform: translateY(-6px); }
+
+
 .app-root.admin-mode {
   align-items: flex-start;
   background-color: #f1f5f9;
@@ -23,6 +58,96 @@
 .login-form button{margin-top:0.5rem;padding:0.75rem;border-radius:10px;border:none;background-image:var(--brand);color:white;font-weight:700;cursor:pointer;box-shadow:0 8px 20px rgba(79,70,229,0.15);transition:transform 0.12s,box-shadow 0.12s}
 .login-form button:disabled{opacity:0.6;cursor:not-allowed}
 .login-form button:hover:not(:disabled){transform:translateY(-2px);box-shadow:0 14px 30px rgba(79,70,229,0.2)}
+
+/* Split login layout */
+.login-split{display:flex;align-items:center}
+.login-left{flex:1}
+.login-right{flex:1}
+.login-illustration{max-width:520px}
+
+/* inputs styled like the reference */
+.login-right input[type="email"],
+.login-right input[type="password"]{
+  background:#f3f4f6;border:1px solid #e5e7eb;padding:0.9rem 1rem;border-radius:10px;width:100%;font-size:0.95rem
+}
+.login-right input:focus{outline:none;box-shadow:0 6px 20px rgba(79,70,229,0.06);border-color:rgba(79,70,229,0.12)}
+
+/* make login button pill-shaped */
+.login-right .rounded-full{border-radius:9999px}
+
+@media (max-width: 1024px){
+  .login-left{display:none}
+  .w-full.max-w-6xl{padding:1.25rem}
+}
+
+/* login-right background (back of container content) */
+.login-right{
+  padding: 2rem;
+  border-radius: 12px;
+  background-repeat: no-repeat;
+  background-position: center right;
+  background-size: cover;
+}
+
+.login-right .login-panel{
+  background: rgba(255,255,255,0.95);
+  backdrop-filter: blur(4px);
+}
+
+/* Use a default gradient if no image is provided */
+.login-right.no-bg{
+  background: linear-gradient(180deg,#ffffff,#f8fafc);
+}
+
+/* helper: small screens stack */
+@media (max-width:640px){
+  .login-right{padding:1rem}
+  .login-panel{padding:1rem}
+}
+
+/* Page-level container for login */
+.login-page{
+  min-height:100vh;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  padding:3rem 1rem;
+  background:#f6f9fb;
+}
+
+/* Bigger outer card */
+.login-page > .w-full.max-w-6xl{
+  border-radius:20px;
+  box-shadow: 0 30px 50px rgba(2,6,23,0.08);
+}
+
+/* Make illustration larger and centered */
+.login-left .login-illustration{max-height:520px;width:auto}
+
+/* Login panel styling (inner white card) */
+.login-panel{
+  border-radius:14px;
+  padding:28px;
+  background:rgba(255,255,255,0.98);
+  border:1px solid rgba(15,23,42,0.04);
+  box-shadow: 0 6px 18px rgba(15,23,42,0.04);
+}
+
+/* Inputs style to match reference */
+.login-panel input{
+  background:#f3f7fb;
+  border:1px solid rgba(15,23,42,0.04);
+  padding:14px 16px;
+  border-radius:12px;
+}
+
+/* Pill sign-in button a bit taller */
+.login-panel .rounded-full{padding:14px 20px}
+
+@media (max-width:1024px){
+  .login-page{padding:1.25rem}
+  .login-left{display:none}
+}
 
 .login-container p{margin-top:1rem;color:rgba(255,255,255,0.6);font-size:0.9rem}
 
