@@ -11,6 +11,71 @@ type Biller = {
   status?: string
 }
 
+// Provider data structure
+const billCategories = [
+  { 
+    id: 'electricity', 
+    name: 'Electricity', 
+    providers: [
+      { id: 'batelec-ii-balayan', name: 'BATELEC II - Balayan' },
+      { id: 'batelec-ii-nasugbu', name: 'BATELEC II - Nasugbu' }
+    ]
+  },
+  { 
+    id: 'water', 
+    name: 'Water', 
+    providers: [
+      { id: 'balayan-water-district', name: 'Balayan Water District' },
+      { id: 'prime-water-nasugbu', name: 'Prime Water Nasugbu' },
+      { id: 'lian-water-district', name: 'Lian Water District' }
+    ]
+  },
+  { 
+    id: 'internet', 
+    name: 'Internet', 
+    providers: [
+      { id: 'pldt', name: 'PLDT' },
+      { id: 'globe-home', name: 'Globe At Home' },
+      { id: 'converge', name: 'Converge ICT' },
+      { id: 'sky-cable', name: 'Sky Cable' },
+      { id: 'dito-fiber', name: 'DITO Fiber' },
+      { id: 'streamtech', name: 'Streamtech' }
+    ]
+  },
+  { 
+    id: 'phone', 
+    name: 'Phone', 
+    providers: [
+      { id: 'globe', name: 'Globe Telecom' },
+      { id: 'smart', name: 'Smart Communications' },
+      { id: 'dito', name: 'DITO Telecommunity' },
+      { id: 'sun', name: 'Sun Cellular' }
+    ]
+  },
+  { 
+    id: 'cable', 
+    name: 'Cable TV', 
+    providers: [
+      { id: 'sky-cable-tv', name: 'Sky Cable' },
+      { id: 'cignal', name: 'Cignal TV' },
+      { id: 'gsat', name: 'G Sat' },
+      { id: 'destiny-cable', name: 'Destiny Cable' }
+    ]
+  },
+  { 
+    id: 'others', 
+    name: 'Others', 
+    providers: [
+      { id: 'sss', name: 'SSS Contribution/Loan' },
+      { id: 'pagibig', name: 'Pag-IBIG Fund' },
+      { id: 'philhealth', name: 'PhilHealth' },
+      { id: 'insurance', name: 'Insurance Companies' },
+      { id: 'credit-card', name: 'Credit Card Bills' },
+      { id: 'government', name: 'Government Services' }
+    ]
+  },
+]
+
 export default function Billers() {
   const [billers, setBillers] = useState<Biller[]>([])
   const [loading, setLoading] = useState(false)
@@ -70,16 +135,17 @@ export default function Billers() {
     e.preventDefault()
     setError(null)
     try {
-      // for now, log any extra fields (e.g. provider/reference for electricity)
-      if (newBiller.bill_type === 'Electricity') {
+      // Log any extra fields for all bill types
+      if (newBiller.bill_type && ['Electricity', 'Water', 'Internet', 'Phone', 'Cable TV', 'Others'].includes(newBiller.bill_type)) {
         // eslint-disable-next-line no-console
-        console.log('Adding electricity biller with details:', {
+        console.log(`Adding ${newBiller.bill_type.toLowerCase()} biller with details:`, {
           provider: newBiller.provider,
           reference: newBiller.reference,
           recipient_name: newBiller.recipient_name,
           recipient_email: newBiller.recipient_email,
         })
       }
+      
       const payload: any = {
         bill_type: newBiller.bill_type,
         amount: Number(newBiller.amount || 0),
@@ -121,6 +187,49 @@ export default function Billers() {
     if (showAddModal) loadProfiles()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [showAddModal])
+
+  // Helper function to get providers for current bill type
+  const getCurrentProviders = () => {
+    const category = billCategories.find(cat => cat.name === newBiller.bill_type);
+    return category ? category.providers : [];
+  }
+
+  // Check if current bill type should show provider fields
+  const shouldShowProviderFields = () => {
+    return ['Electricity', 'Water', 'Internet', 'Phone', 'Cable TV', 'Others'].includes(newBiller.bill_type);
+  }
+
+  // Get the label for reference number field based on bill type
+  const getReferenceFieldLabel = () => {
+    switch (newBiller.bill_type) {
+      case 'Internet':
+        return 'Account Number';
+      case 'Phone':
+        return 'Phone Number';
+      case 'Cable TV':
+        return 'Account Number';
+      default:
+        return 'Biller Reference Number';
+    }
+  }
+
+  // Get placeholder text for reference number field based on bill type
+  const getReferenceFieldPlaceholder = () => {
+    switch (newBiller.bill_type) {
+      case 'Internet':
+        return 'Enter internet account number';
+      case 'Phone':
+        return 'Enter phone number';
+      case 'Cable TV':
+        return 'Enter cable TV account number';
+      case 'Electricity':
+        return 'Enter electricity reference number';
+      case 'Water':
+        return 'Enter water reference number';
+      default:
+        return 'Enter biller reference number';
+    }
+  }
 
   return (
     <div className="bg-white rounded-2xl shadow-lg p-6">
@@ -184,6 +293,8 @@ export default function Billers() {
               <label className="block text-sm text-gray-700">Amount
                 <input
                   required
+                  type="number"
+                  step="0.01"
                   className="mt-1 w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                   placeholder="Amount"
                   value={newBiller.amount}
@@ -200,8 +311,8 @@ export default function Billers() {
                 />
               </label>
 
-              {/* Electricity-specific fields */}
-              {newBiller.bill_type === 'Electricity' && (
+              {/* Provider fields for all bill types */}
+              {shouldShowProviderFields() && (
                 <div className="space-y-3">
                   <label className="block text-sm text-gray-700">Provider
                     <select
@@ -210,61 +321,19 @@ export default function Billers() {
                       onChange={(e) => setNewBiller((s: any) => ({ ...s, provider: e.target.value }))}
                     >
                       <option value="">Select provider</option>
-                      <option value="BATELEC II - Balayan">BATELEC II - Balayan</option>
-                      <option value="BATELEC II - Nasugbu">BATELEC II - Nasugbu</option>
+                      {getCurrentProviders().map((provider) => (
+                        <option key={provider.id} value={provider.name}>
+                          {provider.name}
+                        </option>
+                      ))}
                     </select>
                   </label>
 
-                  <label className="block text-sm text-gray-700">Biller Reference Number
+                  <label className="block text-sm text-gray-700">
+                    {getReferenceFieldLabel()}
                     <input
                       className="mt-1 w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 font-mono"
-                      placeholder="Enter biller reference number"
-                      value={newBiller.reference || ''}
-                      onChange={(e) => setNewBiller((s: any) => ({ ...s, reference: e.target.value }))}
-                    />
-                  </label>
-
-                  <label className="block text-sm text-gray-700">Recipient Name
-                    <input
-                      className="mt-1 w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      placeholder="Enter recipient full name"
-                      value={newBiller.recipient_name || ''}
-                      onChange={(e) => setNewBiller((s: any) => ({ ...s, recipient_name: e.target.value }))}
-                    />
-                  </label>
-
-                  <label className="block text-sm text-gray-700">Recipient Email
-                    <input
-                      type="email"
-                      className="mt-1 w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      placeholder="Enter recipient email"
-                      value={newBiller.recipient_email || ''}
-                      onChange={(e) => setNewBiller((s: any) => ({ ...s, recipient_email: e.target.value }))}
-                    />
-                  </label>
-                </div>
-              )}
-
-              {/* Water-specific fields (same inputs as Electricity) */}
-              {newBiller.bill_type === 'Water' && (
-                <div className="space-y-3">
-                  <label className="block text-sm text-gray-700">Provider
-                    <select
-                      className="mt-1 w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      value={newBiller.provider || ''}
-                      onChange={(e) => setNewBiller((s: any) => ({ ...s, provider: e.target.value }))}
-                    >
-                      <option value="">Select provider</option>
-                      <option value="Balayan Water District">Balayan Water District</option>
-                      <option value="Prime Water Nasugbu">Prime Water Nasugbu</option>
-                      <option value="Lian Water District">Lian Water District</option>
-                    </select>
-                  </label>
-
-                  <label className="block text-sm text-gray-700">Biller Reference Number
-                    <input
-                      className="mt-1 w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 font-mono"
-                      placeholder="Enter biller reference number"
+                      placeholder={getReferenceFieldPlaceholder()}
                       value={newBiller.reference || ''}
                       onChange={(e) => setNewBiller((s: any) => ({ ...s, reference: e.target.value }))}
                     />
