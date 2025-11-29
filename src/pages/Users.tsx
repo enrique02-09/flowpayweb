@@ -333,6 +333,7 @@ export default function Users() {
               <label className="block text-sm text-gray-700">Balance
                 <input
                   type="number"
+                  disabled
                   className="mt-1 w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                   value={editBalance}
                   onChange={(e) => setEditBalance(e.target.value)}

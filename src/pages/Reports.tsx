@@ -83,13 +83,8 @@ export default function Reports() {
       setTotal(Number(count ?? 0))
 
       // compute summary client-side for now
-      const aggQ = await supabase
-        .from('transactions')
-        .select('amount', { count: 'exact' })
-        .gte('created_at', fromDate ? new Date(fromDate).toISOString() : new Date(0).toISOString())
-        .lte('created_at', new Date(toDate).setHours ? new Date(toDate).toISOString() : new Date().toISOString())
-
-      // Note: above is just to keep pattern; we'll compute summary from fetched page for simplicity
+      // Note: previously an aggregate query was issued here but its result wasn't used.
+      // We compute summary from the fetched page for simplicity.
       const totalAmount = (data || []).reduce((s: number, r: any) => s + Number(r.amount || 0), 0)
       const totalTx = Number(count ?? (data || []).length)
       setSummary({ totalTx, totalAmount, avgAmount: totalTx ? totalAmount / totalTx : 0 })
@@ -148,8 +143,8 @@ export default function Reports() {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 mb-6">
-        <div className="lg:col-span-3 space-y-4">
+      <div className="grid grid-cols-1 gap-6 mb-6">
+        <div className="space-y-4">
           <div className="flex gap-3 items-center">
             <div className="flex gap-2 items-center">
               <label className="text-xs text-gray-600">From</label>
@@ -183,14 +178,7 @@ export default function Reports() {
           <PlaceholderChart title="Transaction Volume" data={chartData} type="bar" height={220} />
         </div>
 
-        <aside className="bg-white border border-gray-100 rounded-xl p-4">
-          <h4 className="text-sm font-semibold text-gray-800 mb-3">Quick Actions</h4>
-          <div className="space-y-2">
-            <button className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-left">Generate monthly summary</button>
-            <button className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-left">Download receipts</button>
-            <button className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-left">Send report email</button>
-          </div>
-        </aside>
+        {/* Quick Actions removed (no functionality) */}
       </div>
 
       <div className="bg-white rounded-xl border border-gray-100 p-4">
