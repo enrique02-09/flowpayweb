@@ -423,7 +423,7 @@ export default function Dashboard({ onLogout }: Props) {
               />
               <StatsCard
                 title="Total Transferred"
-                value={loading ? '...' : `$${(totalTransferred ?? 0).toLocaleString()}`}
+                value={loading ? '...' : `₱${(totalTransferred ?? 0).toLocaleString()}`}
                 icon="creditCard"
                 color="purple"
               />

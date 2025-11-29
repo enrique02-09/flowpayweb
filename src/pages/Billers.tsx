@@ -437,7 +437,7 @@ export default function Billers() {
             {!loading && billers.map((b) => (
               <tr key={b.id} className="border-b border-gray-100 hover:bg-gray-50">
                 <td className="py-3 px-4 text-sm text-gray-800 font-medium">{b.bill_type || '—'}</td>
-                <td className="py-3 px-4 text-sm text-gray-700">${Number(b.amount ?? 0).toLocaleString()}</td>
+                <td className="py-3 px-4 text-sm text-gray-700">₱{Number(b.amount ?? 0).toLocaleString()}</td>
                 <td className="py-3 px-4 text-sm text-gray-700">{b.due_date ? new Date(b.due_date).toLocaleDateString() : '—'}</td>
                 <td className="py-3 px-4 text-sm text-gray-700">{b.created_at ? new Date(b.created_at).toLocaleString() : '—'}</td>
                 <td className="py-3 px-4 text-sm">
