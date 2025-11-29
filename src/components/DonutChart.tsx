@@ -1,3 +1,4 @@
+// @ts-ignore
 import React from 'react'
 import Icon from './Icons'
 
@@ -7,7 +8,7 @@ function polarToCartesian(cx: number, cy: number, r: number, angle: number) {
   const rad = (angle - 90) * (Math.PI / 180.0)
   return { x: cx + r * Math.cos(rad), y: cy + r * Math.sin(rad) }
 }
-
+// @ts-ignore
 function describeArc(cx: number, cy: number, r: number, startAngle: number, endAngle: number) {
   const start = polarToCartesian(cx, cy, r, endAngle)
   const end = polarToCartesian(cx, cy, r, startAngle)

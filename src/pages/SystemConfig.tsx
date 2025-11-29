@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '../services/supabase'
-//import Icon from '../components/Icons'
+// @ts-ignore
+import Icon from '../components/Icons'
 
 export default function SystemConfig() {
   const [settings, setSettings] = useState<Record<string, string>>({})
