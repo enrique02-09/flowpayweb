@@ -1,19 +1,7 @@
-
+// Remove unused imports and functions
 import Icon from './Icons'
 
 type Slice = { label: string; value: number; color?: string }
-
-// function polarToCartesian(cx: number, cy: number, r: number, angle: number) {
-//   const rad = (angle - 90) * (Math.PI / 180.0)
-//   return { x: cx + r * Math.cos(rad), y: cy + r * Math.sin(rad) }
-// }
-// // @ts-ignore
-// function describeArc(cx: number, cy: number, r: number, startAngle: number, endAngle: number) {
-//   const start = polarToCartesian(cx, cy, r, endAngle)
-//   const end = polarToCartesian(cx, cy, r, startAngle)
-//   const largeArcFlag = endAngle - startAngle <= 180 ? '0' : '1'
-//   return `M ${start.x} ${start.y} A ${r} ${r} 0 ${largeArcFlag} 0 ${end.x} ${end.y}`
-// }
 
 export default function DonutChart({ data, size = 220, inner = 0.6, title }: { data?: Slice[]; size?: number; inner?: number; title?: string }) {
   if (!data || data.length === 0) {
